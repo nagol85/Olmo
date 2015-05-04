@@ -1,0 +1,38 @@
+extends layout
+
+block content
+	div.container
+		div.row
+			div.col-sm-6.col-md-4.col-md-offset-4
+				#user
+					h1.text-center.login-title Welcome #{user.firstName}
+						div.signup-wall
+							ul.user-details
+								li Username ---> #{user.username}
+								li Email    ---> #{user.email}
+								li First Name ---> #{user.firstName} 
+								li Last Name ---> #{user.lastName}
+								li Pasword_id --->#{password}
+					h4.text-center The password_ID for #{user.firstName}
+						div.signup-wall
+							img(src='http://api-bwipjs.rhcloud.com/?bcid=code128&text=#{password}')
+					#message
+						if message
+							h1.text-center.error-message #{message}
+					h4.text-center New password for #{user.firstName}
+						div.signup-wall
+							form(class='form-signin', action='/user', method='POST')
+								input(type='password', name='password' class='form-control', placeholder='Password',required)
+								input(type='password', name='repassword' class='form-control', placeholder=' Repeat Password', required)
+								button(class='btn btn-lg btn-primary btn-block', type='submit') Change Password
+								span.clearfix
+					
+					
+
+		div.row
+			h1.text-center.login-title 
+			a(href='/signout', class='btn btn-lg btn-primary btn-block') Sign Out
+
+					
+
+
