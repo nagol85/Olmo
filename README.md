@@ -1,2 +1,6 @@
 # StockOlmo
-Nodejs mongodb passport 
+Nodejs mongodb passport
+1- start mongod
+2- npm install
+3- npm start
+enjoy
