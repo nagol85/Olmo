@@ -1,0 +1,454 @@
+var express = require('express'),
+    passport = require('passport'),
+    LocalStrategy = require('passport-local').Strategy,
+    mongodb = require('mongodb'),
+    mongoose = require('mongoose'),
+    bcrypt = require('bcrypt'),
+    SALT_WORK_FACTOR = 10,
+    ejs = require('ejs'),
+    fs = require('fs'),
+    patt = /@/i
+;
+
+var multipart = require('multipart');
+var execSync = require('exec-sync');
+mongoose.connect('localhost', 'test');
+var db = mongoose.connection;
+
+db.on('error', console.error.bind(console, 'connection error:'));
+
+db.once('open', function callback() {
+    console.log('Connected to DB');
+});
+
+
+function findLoggedUser(reqUser) {
+ if( typeof reqUser =="undefined"){
+  return(0)
+ }
+ else{
+  return(1)
+ }
+}
+
+
+
+// User Schema
+
+var userSchema = mongoose.Schema({
+    username: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    password: {
+        type: String,
+        required: true
+    },
+
+});
+
+// Bcrypt middleware
+userSchema.pre('save', function (next) {
+    var user = this;
+
+    if (!user.isModified('password')) return next();
+
+    bcrypt.genSalt(SALT_WORK_FACTOR, function (err, salt) {
+        if (err) return next(err);
+
+        bcrypt.hash(user.password, salt, function (err, hash) {
+            if (err) return next(err);
+            user.password = hash;
+            next();
+        });
+    });
+});
+
+// Password verification
+userSchema.methods.comparePassword = function (candidatePassword, cb) {
+    bcrypt.compare(candidatePassword, this.password, function (err, isMatch) {
+        if (err) return cb(err);
+        cb(null, isMatch);
+    });
+};
+
+// Seed a user
+
+
+
+
+var User = mongoose.model('User', userSchema);
+
+// Passport session setup.
+//   To support persistent login sessions, Passport needs to be able to
+//   serialize users into and deserialize users out of the session.  Typically,
+//   this will be as simple as storing the user ID when serializing, and finding
+//   the user by ID when deserializing.
+
+passport.serializeUser(function (user, done) {
+    done(null, user.id);
+});
+
+passport.deserializeUser(function (id, done) {
+    User.findById(id, function (err, user) {
+        done(err, user);
+    });
+});
+
+
+// Use the LocalStrategy within Passport.
+//   Strategies in passport require a `verify` function, which accept
+//   credentials (in this case, a username and password), and invoke a callback
+//   with a user object.  In the real world, this would query a database;
+//   however, in this example we are using a baked-in set of users.
+
+passport.use(new LocalStrategy(function (username, password, done) {
+    User.findOne({
+        username: username
+    }, function (err, user) {
+        if (err) {
+            return done(err);
+        }
+        if (!user) {
+            return done(null, false, {
+                message: 'Unknown user ' + username
+            });
+        }
+        user.comparePassword(password, function (err, isMatch) {
+            if (err) return done(err);
+            if (isMatch) {
+                user.logged=1   
+                return done(null, user);
+            } else {
+                return done(null, false, {
+                    message: 'Invalid password'
+                });
+            }
+        })
+    });
+}));
+
+
+var app = express();
+app.use(express.bodyParser({
+    limit: '300mb'
+}));
+app.use('/public', express.static(__dirname + '/views/public'));
+app.set('view engine', 'ejs');
+app.set('views', __dirname + '/views');
+// configure Express
+
+app.configure(function () {
+    app.engine('ejs', require('ejs-locals'));
+    app.use(express.logger());
+    app.use(express.cookieParser());
+    app.use(express.bodyParser());
+    app.use(express.methodOverride());
+    app.use(express.session({
+        secret: 'keyboard cat'
+    }));
+    // Initialize Passport!  Also use passport.session() middleware, to support
+    // persistent login sessions (recommended).
+    app.use(passport.initialize());
+    app.use(passport.session());
+    app.use(app.router);
+
+});
+
+
+
+
+app.get('/true_register', function (req, res) {
+    res.render('register.ejs',{message:""});
+});
+
+
+
+
+app.post('/true_register', function (req, res) {
+ if (req.body.email != req.body.email_repeat) {
+  return res.render('register.ejs', {
+   message: "e-mail is not the same in both entrances, check for typos"
+  });
+ }
+ else{    
+  if (patt.test(req.body.email)){
+   if (req.body.password != req.body.password_repeat) {
+    return res.render('register.ejs', {
+     message: "password does not match repeated password, check for typos!!"
+    });
+   }
+  }
+  else { 
+   return(res.render('register.ejs',{message:"not a valid email"}));
+  }
+ }
+
+ var user = new User({
+  username: String(req.body.Username),
+  email: req.body.email,
+  password: req.body.password,
+ });
+ user.save(function (err) {
+  if (err) {
+   return res.render('register.ejs', {
+    message: err
+   });
+  } 
+  else {
+   var CreateDir = String("mkdir ./views/users/" + req.body.Username );
+   var DirCreated = execSync(CreateDir);
+  };
+ });
+ return res.redirect('EnricH/home')
+});
+
+
+
+
+
+
+app.get('/register', function (req, res) {
+    if (!req.user) {
+        return(res.redirect('EnricH/true_register'));
+    } else {
+        return(res.redirect('/home'));
+    }
+});
+app.get('/download',ensureAuthenticated,function (req,res) {
+  res.download('views/users/'+req.user.username+'/Results.tsv');
+});
+app.get('/EnricH', function (req, res) {
+ res.render('home.ejs',{logged:findLoggedUser(req.user)});
+});
+
+app.get('/home', function (req, res) {
+ res.render('home.ejs',{logged:findLoggedUser(req.user)});
+});
+app.get('/results',ensureAuthenticated, function (req, res) {
+    res.render('results.ejs',{mymessage:req.query.mymessage,logged:"1"});
+});
+app.get('/about', function (req, res) {
+    res.render('about.ejs',{logged:findLoggedUser(req.user)});
+});
+app.get('/usage', function (req, res) {
+    res.render('usage.ejs',{mymessage:req.query.mymessage,logged:findLoggedUser(req.user)});
+});
+
+app.get('/upload', ensureAuthenticated, function (req, res) {
+    res.render('upload.ejs',{logged:findLoggedUser(req.user)});
+});
+
+app.get('/unsupportedFileFormat', function (req, res) {
+    res.render('unsupportedFileFormat.ejs');
+});
+
+
+app.post('/upload', ensureAuthenticated, function (req, res) {
+ var bunyan = require('bunyan');
+ console.log(req.body.radioexons);
+ var log = bunyan.createLogger({name: "myapp"});
+ var mod_spawnasync = require('spawn-async');
+ var worker = mod_spawnasync.createWorker({ 'log': log });
+ if(String(req.body.radioexons) === "radioexons"){
+   var doTheAnalysis = String("cd ./Software/EnricH;perl All_Analysis.pl -e exon -u " + req.user.username + " -i "  + req.files.thumbnail.path+ " -o " + '../../views/users/' + req.user.username + ";mail -r ETOOL@noreply.com -s 'Analysis Finished' <<< 'Your Analysis has been completed now you can check the results.' " +req.user.email);
+ }
+ else {
+  var doTheAnalysis = String("cd ./Software/EnricH;perl All_Analysis.pl -u " + req.user.username + " -i "  + req.files.thumbnail.path + " -o " + '../../views/users/' + req.user.username + ";mail -r ETOOL@noreply.com -s 'Analysis Finished' <<< 'Your Analysis has been completed now you can check the results.' " +req.user.email);
+ }
+ console.log(doTheAnalysis);
+ console.log(req.user.email);
+
+ var RemoveTMPfile = String("rm " +req.files.thumbnail.path);
+ worker.aspawn(['bash', '-c',doTheAnalysis],
+ function (err, stdout, stderr,remove_file) {
+  if (err) {
+   console.log('error: %s', err.message +'   ' + req.files.thumbnail.path + req.files.thumbnail);          
+  }
+  else {
+   console.log(stdout);
+  }
+  if(String(stderr)==3){
+   console.log("Error 3");
+  }
+  var remove_file =function (RemoveTMPfile){
+    res.redirect("EnricH/results")
+    worker.aspawn(['bash', '-c',RemoveTMPfile],
+    function (err, stdout, stderr) {
+     if (err) {
+     console.log('error: %s', err.message +'   ' + req.files.thumbnail.path + req.files.thumbnail);
+    }
+    else {
+     console.log(stdout);
+    }
+    if(String(stderr)==3){
+     console.log("Error 3");
+    }
+    worker.destroy();
+  }
+ )}
+ remove_file(RemoveTMPfile)
+ });
+});
+
+
+app.get('/', function (req, res) {
+    res.redirect('EnricH/home');
+});
+
+
+app.get('/login', function (req, res, next) {
+    if (!req.user) {
+        return res.render('login.ejs',{message: req.query.mymessage,login:"1",logged:findLoggedUser(req.user)} 
+        )
+    } else {
+        return res.redirect('EnricH/home');
+    }
+});
+
+
+
+
+app.post('/login', function (req, res, next) {
+    passport.authenticate('local', function (err, user, info) {
+        if (err) {
+            return next(err)
+        }
+        if (!user) {
+            req.session.messages = [info.message];
+            return res.render('login.ejs',{message:"Invalid user name or Password"})
+        }
+        req.logIn(user, function (err) {
+            if (err) {
+                return next(err);
+            }
+            return res.redirect('EnricH/upload');
+        });
+    })(req, res, next);
+});
+
+
+//Prepare user specific files, 
+var urler = function (pathName, req, res) {
+
+    fs.exists('views/' + String(pathName), function (existence) {
+        if (existence) {
+            res.render(pathName, {
+                user: req.user
+            });
+        } else {
+            res.redirect('EnricH/');
+        }
+    });
+}
+
+
+
+//FETCH result files, transform them to javascript references
+
+app.get('/clinvar', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/RSinfo1.ejs'), req, res);
+});
+app.get('/clinvar', ensureAuthenticated, function (req, res) {
+});
+app.get('/clinvar_related', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/Clinvar_related.ejs'), req, res);
+});
+app.get('/gobp_table', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/go_bp_table.ejs'), req, res);
+});
+app.get('/gocc_table', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/go_cc_table.ejs'), req, res);
+});
+app.get('/gomf_table', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/go_mf_table.ejs'), req, res);
+});
+app.get('/kegg', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/KEGG.ejs'), req, res);
+});
+app.get('/reactome', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/Reactome.ejs'), req, res)
+});
+app.get('/BPjson', ensureAuthenticated, function (req, res) {
+    res.sendfile('./views/users/' + req.user.username + '/HTML/BP.json');
+});
+app.get('/CCjson', ensureAuthenticated, function (req, res) {
+    res.sendfile('./views/users/' + req.user.username + '/HTML/CC.json');
+});
+app.get('/MFjson', ensureAuthenticated, function (req, res) {
+    res.sendfile('./views/users/' + req.user.username + '/HTML/MF.json');
+});
+app.get('/treeBP', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/treeBP.ejs'), req, res);
+});
+app.get('/treeCC', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/treeCC.ejs'), req, res);
+});
+app.get('/treeMF', ensureAuthenticated, function (req, res) {
+    urler(String('users/' + req.user.username + '/HTML/treeMF.ejs'), req, res);
+});
+app.get('/index', ensureAuthenticated, function (req, res) {
+    res.redirect('EnricH/home');
+});
+
+app.get('/logout', function (req, res) {
+    req.logout();
+    res.redirect('EnricH/home'); 
+});
+
+app.listen(8000, function () {
+    console.log('Express server listening on port 8000');
+});
+
+
+
+
+// Simple route middleware to ensure user is authenticated.
+//   Use this route middleware on any resource that needs to be protected.  If
+//   the request is authenticated (typically via a persistent login session),
+//   the request will proceed.  Otherwise, the user will be redirected to the
+//   login page.
+function ensureAuthenticated(req, res, next) 
+{
+    if (req.isAuthenticated()) 
+    {
+        return next();
+    }
+    res.redirect('EnricH/login')
+}
+
+
+function parse_multipart(req) {
+    var parser = multipart.parser();
+
+    // Make parser use parsed request headers
+    parser.headers = req.headers;
+
+    // Add listeners to request, transfering data to parser
+
+    req.addListener("data", function (chunk) {
+        parser.write(chunk);
+    });
+
+    req.addListener("end", function () {
+        parser.close();
+    });
+
+    return parser;
+}
+
+
+/*
+ * Handle file upload
+ */
+
+
+app.use(function (req, res) {
+    res.render('404.ejs');
+});

@@ -1,26 +1,11 @@
-doctype html
-// views/index.ejs
-html
-  head
-    title Node Authentication
-    | &#x9;
-    link(rel='stylesheet', href='//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css')
-    // load bootstrap css
-    link(rel='stylesheet', href='//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css')
-    // load fontawesome
-    style.
-      body      { padding-top:80px; }
-  body
-    .container
-      .jumbotron.text-center
-        h1
-          span.fa.fa-lock
-          |  Node Authentication
-        |             
-        p Login with:
-        |             
-        a.btn.btn-default(href='/login')
-          span.fa.fa-user
-          |  Local Login
-
-
+a(href='/upstock', class='text-center new-account') Up Stock
+p
+a(href='/downstock', class='text-center new-account') Down Stock
+p
+a(href='/product', class='text-center new-account') Define Product
+p
+a(href='/login', class='text-center new-account') Login
+p
+a(href='/signup', class='text-center new-account') Register
+p
+a(href='/logout', class='text-center new-account') Log OUT

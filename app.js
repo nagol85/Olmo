@@ -4,9 +4,14 @@ var favicon = require('static-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var fs = require('fs');
+var multipart = require('connect-multiparty');
 
+
+// Configure Mongo Se
 var dbConfig = require('./db');
 var mongoose = require('mongoose');
+
 // Connect to DB
 mongoose.connect(dbConfig.url);
 
@@ -21,8 +26,12 @@ app.use(favicon());
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded());
+app.use(multipart());
+
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+
 
 // Configuring Passport
 var passport = require('passport');
@@ -47,7 +56,17 @@ initPassport(passport);
 var chPass= require('./passport/chpass');
 var chPassword =  chPass.chPassword;
 
+// define authenticate options
+var authenticate= require('./passport/authenticate');
+var isAdminAuthenticated = authenticate.isAdminAuthenticated;
+var isAuthenticated = authenticate.isAuthenticated;
 
+//define product function
+var Product = require('./products/defProduct');
+var DefProduct =  Product.DefProduct;
+
+
+//Router
 var routes = require('./routes/index')(passport);
 app.use('/', routes);
 

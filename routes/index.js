@@ -2,35 +2,6 @@ var express = require('express');
 var router = express.Router();
 
 
-var isAuthenticated = function (req, res, next) {
-    // if user is authenticated in the session, call the next() to call the next request handler 
-    // Passport adds this method to request object. A middleware is allowed to add properties to
-    // request and response objects
-    if (req.isAuthenticated())
-        return next();
-    // if the user is not authenticated then redirect him to the login page
-    res.redirect('/');
-}
-
-var isAdminAuthenticated = function (req, res, next) {
-    User.findOne({ 'username' :  'admin'}, function (err, user) {
-            if (!user){
-                return next();
-            }
-            else{
-                if (req.isAuthenticated()){
-                    if (req.user.username == 'admin'){
-                        return next();
-                    }
-                    res.redirect('/');
-                }
-                res.redirect('/');
-            }
-        }
-    );
-}
-
-
 module.exports = function(passport){
 
 	/* GET login page. */
@@ -48,7 +19,7 @@ module.exports = function(passport){
 	router.post('/login', passport.authenticate('login', {
 		successRedirect: '/user',
 		failureRedirect: '/login',
-		failureFlash : true  
+		failureFlash : true
 	}));
 
 	/* GET Registration Page */
@@ -60,12 +31,12 @@ module.exports = function(passport){
 	router.post('/signup', passport.authenticate('signup', {
 		successRedirect: '/user',
 		failureRedirect: '/signup',
-		failureFlash : true  
+		failureFlash : true
 	}));
 
 	/* GET Home Page */
 	router.get('/user', isAuthenticated, function(req, res){
-		if (req.user.username == 'admin') 
+		if (req.user.username == 'admin')
 			res.redirect('/admin');
 		res.render('user', { user: req.user, password : req.user.username+req.user.password.substring(5, 15), message: req.flash('message') });
 	});
@@ -80,6 +51,28 @@ module.exports = function(passport){
 		res.render('admin', { user: req.user });
 	});
 
+  /* Down Stock */
+	router.get('/downstock', function(req, res){
+		res.render('downstock', { message: req.flash('message') });
+	});
+
+  /* UP Stock */
+    router.get('/upstock', function(req, res){
+        res.render('upstock', { message: req.flash('message') });
+    });
+
+
+  /* Products */
+	router.get('/product', function(req, res){
+		res.render('product', { message: req.flash('message') });
+	});
+
+	router.post('/upload', DefProduct , function(req, res) {
+        res.redirect('/product')
+	});
+
+
+
 	/* Handle Logout */
 	router.get('/signout', function(req, res) {
 		req.logout();
@@ -88,8 +81,3 @@ module.exports = function(passport){
 
 	return router;
 }
-
-
-
-
-
