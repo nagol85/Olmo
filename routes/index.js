@@ -24,7 +24,7 @@ module.exports = function(passport){
 
 	/* GET Registration Page */
 	router.get('/signup', isAdminAuthenticated, function(req, res){
-		res.render('register',{message: req.flash('message')});
+		res.render('register',{message: req.flash('message')})
 	});
 
 	/* Handle Registration POST */
@@ -38,7 +38,7 @@ module.exports = function(passport){
 	router.get('/user', isAuthenticated, function(req, res){
 		if (req.user.username == 'admin')
 			res.redirect('/admin');
-		res.render('user', { user: req.user, password : req.user.username+req.user.password.substring(5, 15), message: req.flash('message') });
+		res.render('user', { user: req.user, password : req.user.username+req.user.password.substring(5, 15), message: req.flash('message') })
 	});
 
 	/* Handle Registration POST */
@@ -51,18 +51,18 @@ module.exports = function(passport){
 		res.render('admin', { user: req.user });
 	});
 
-  /* Down Stock */
+	/* Down Stock */
 	router.get('/downstock', function(req, res){
 		res.render('downstock', { message: req.flash('message') });
 	});
 
-  /* UP Stock */
+  	/* UP Stock */
     router.get('/upstock', function(req, res){
         res.render('upstock', { message: req.flash('message') });
     });
 
 
-  /* Products */
+  	/* Products */
 	router.get('/product', function(req, res){
 		res.render('product', { message: req.flash('message') });
 	});

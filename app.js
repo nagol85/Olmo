@@ -58,12 +58,12 @@ var chPassword =  chPass.chPassword;
 
 // define authenticate options
 var authenticate= require('./passport/authenticate');
-var isAdminAuthenticated = authenticate.isAdminAuthenticated;
-var isAuthenticated = authenticate.isAuthenticated;
+//var isAdminAuthenticated = authenticate.isAdminAuthenticated;
+//var isAuthenticated = authenticate.isAuthenticated;
 
 //define product function
 var Product = require('./products/defProduct');
-var DefProduct =  Product.DefProduct;
+//var DefProduct =  Product.DefProduct;
 
 
 //Router

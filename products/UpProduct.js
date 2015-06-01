@@ -1,7 +1,7 @@
 var Product = require('../models/product');
 
 
-UpProduct = function (product, next) {
+UpProduct = function (product, req, res, next) {
     Product.findOne({'sapId': product[0]},
         function (err, sapId) {
             // In case of any error, return using the done method
@@ -32,14 +32,13 @@ UpProduct = function (product, next) {
                         throw err;
                     }
                     else {
-                        console.log('Product OK');
-                        req.flash('message', 'Product OK');
-                        return next();
+                        console.log('product saved', sapId[0])
                     }
                     //return done(null, user);
                 });
             }
         });
+    return ('Product Update')
 };
 
 module.exports = UpProduct;
