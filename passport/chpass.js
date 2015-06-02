@@ -27,7 +27,10 @@ chPassword = function (req, res, next){
         }
     );
     req.flash('message', 'password changed');
-    return next();      
+    return next();
 }
+
+
+
 
 module.exports = chPassword;
